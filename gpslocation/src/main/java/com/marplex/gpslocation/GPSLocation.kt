@@ -7,20 +7,17 @@ import android.content.Context
 import android.content.Context.LOCATION_SERVICE
 import android.content.IntentSender
 import android.content.pm.PackageManager
-import android.location.*
+import android.location.Location
 import android.location.LocationListener
-import android.os.Build
+import android.location.LocationManager
 import android.os.Looper
 import androidx.core.app.ActivityCompat
-import androidx.core.location.LocationManagerCompat
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.api.ResolvableApiException
-import com.google.android.gms.common.util.concurrent.HandlerExecutor
 import com.google.android.gms.location.*
 import com.google.android.gms.tasks.CancellationTokenSource
 import java.util.*
-import java.util.function.Consumer
 
 /**
  * A utility class that makes it easy to receive location updates.
@@ -64,13 +61,13 @@ class GPSLocation(private val context: Context) {
         }
 
         override fun onLocationAvailability(availability: LocationAvailability) {
-            if(!availability.isLocationAvailable)
+            if (!availability.isLocationAvailable)
                 gpsLocationListener?.onLocationStatusReceived(LocationStatus.NO_GPS)
         }
     }
 
     private val locationListener = object : LocationListener {
-        override fun onProviderEnabled(provider: String) { }
+        override fun onProviderEnabled(provider: String) {}
         override fun onLocationChanged(location: Location) {
             gpsLocationListener?.onLocationReceived(Collections.singletonList(location))
         }
@@ -93,7 +90,7 @@ class GPSLocation(private val context: Context) {
     ) {
         gpsLocationListener?.onLocationStatusReceived(LocationStatus.PERMISSIONS_DENIED)
         false
-    }else true
+    } else true
 
     /**
      * Start location updates with [locationRequest]
@@ -107,28 +104,30 @@ class GPSLocation(private val context: Context) {
         val locationManager = context.getSystemService(LOCATION_SERVICE) as LocationManager
         val gpsStatus = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
 
-        if(!gpsStatus) gpsLocationListener?.onLocationStatusReceived(LocationStatus.NO_GPS)
-        else if(isAllPermissionsGranted()){
-            if(isGooglePlayServicesAvailable()) {
-                fusedLocationClient.requestLocationUpdates(locationRequest,
+        if (!gpsStatus) gpsLocationListener?.onLocationStatusReceived(LocationStatus.NO_GPS)
+        else if (isAllPermissionsGranted()) {
+            if (isGooglePlayServicesAvailable()) {
+                fusedLocationClient.requestLocationUpdates(
+                    locationRequest,
                     locationCallback,
-                    Looper.getMainLooper())
-            }else locationManager.requestLocationUpdates(
+                    Looper.getMainLooper()
+                )
+            } else locationManager.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
                 1000,
                 0F,
                 locationListener
             )
-        }else gpsLocationListener?.onLocationStatusReceived(LocationStatus.MISSING_PERMISSIONS)
+        } else gpsLocationListener?.onLocationStatusReceived(LocationStatus.MISSING_PERMISSIONS)
     }
 
     /**
      * Stop location updates
      */
     fun stopLocationUpdates() {
-        if(isGooglePlayServicesAvailable()) {
+        if (isGooglePlayServicesAvailable()) {
             fusedLocationClient.removeLocationUpdates(locationCallback)
-        }else {
+        } else {
             val locationManager = context.getSystemService(LOCATION_SERVICE) as LocationManager
             locationManager.removeUpdates(locationListener)
         }
@@ -139,15 +138,15 @@ class GPSLocation(private val context: Context) {
      */
     @SuppressLint("MissingPermission")
     fun getLastKnownLocation(locationCallback: ((Location) -> Unit)) {
-        if(isGooglePlayServicesAvailable()) {
+        if (isGooglePlayServicesAvailable()) {
             fusedLocationClient.lastLocation
                 .addOnSuccessListener { locationCallback(it) }
                 .addOnFailureListener { gpsLocationListener?.onLocationException(it) }
-        }else {
+        } else {
             val locationManager = context.getSystemService(LOCATION_SERVICE) as LocationManager
             val location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
 
-            if(location != null) locationCallback(location)
+            if (location != null) locationCallback(location)
             else gpsLocationListener?.onLocationException(Exception("Location not available"))
         }
     }
@@ -159,12 +158,12 @@ class GPSLocation(private val context: Context) {
      */
     @SuppressLint("MissingPermission")
     fun getCurrentLocation(locationCallback: ((Location) -> Unit)) {
-        if(isGooglePlayServicesAvailable()) {
+        if (isGooglePlayServicesAvailable()) {
             val token = CancellationTokenSource().token
             fusedLocationClient.getCurrentLocation(locationRequest.priority, token)
                 .addOnSuccessListener { locationCallback(it) }
                 .addOnFailureListener { gpsLocationListener?.onLocationException(it) }
-        }else getLastKnownLocation(locationCallback)
+        } else getLastKnownLocation(locationCallback)
     }
 
     /**
@@ -178,7 +177,8 @@ class GPSLocation(private val context: Context) {
                 try {
                     // Handle result in onActivityResult()
                     e.startResolutionForResult(activity, 100)
-                } catch (sendEx: IntentSender.SendIntentException) { }
+                } catch (sendEx: IntentSender.SendIntentException) {
+                }
             }
         }
     }
@@ -187,7 +187,7 @@ class GPSLocation(private val context: Context) {
      * Call this method in every activity in [Activity.onActivityResult]
      */
     fun handleActivityResult(requestCode: Int, resultCode: Int) {
-        if(requestCode == 100) when(resultCode) {
+        if (requestCode == 100) when (resultCode) {
             Activity.RESULT_OK -> startLocationUpdates()
             Activity.RESULT_CANCELED -> gpsLocationListener?.onLocationStatusReceived(LocationStatus.NO_GPS)
         }
