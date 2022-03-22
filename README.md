@@ -22,7 +22,7 @@ allprojects {
 
 ```gradle
 dependencies {
-    implementation "com.github.marplex:gpslocation:1.0.0"
+    implementation "com.github.Marplex:gpslocation:1.0.0"
 }
 ```
 
